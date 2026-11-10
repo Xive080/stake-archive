@@ -58,6 +58,18 @@ th{font:.55rem var(--hud);color:var(--gold);text-align:left;padding:10px;border-
 td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top}
 .pill{font:.52rem var(--hud);padding:5px 8px;border:1px solid currentColor;white-space:nowrap}.ok{color:#6fd39b}.est{color:var(--gold)}
 a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+html.gun,html.gun *{cursor:none!important}
+.reticle{position:fixed;left:0;top:0;width:44px;height:44px;margin:-22px 0 0 -22px;pointer-events:none;z-index:60;opacity:0;transition:opacity .15s;will-change:transform}
+html.gun .reticle{opacity:1}
+.reticle svg{width:100%;height:100%;filter:drop-shadow(0 0 5px rgba(224,53,80,.8))}
+.reticle.kick svg{animation:kick .16s ease-out}
+@keyframes kick{0%{transform:scale(.7) rotate(-14deg)}60%{transform:scale(1.12) rotate(4deg)}100%{transform:none}}
+.fx{position:fixed;pointer-events:none;z-index:59}
+.hole{width:22px;height:22px;margin:-11px 0 0 -11px;opacity:.9;transition:opacity 1.2s ease 3s}
+.hole.gone{opacity:0}
+.flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:58}
+@media (prefers-reduced-motion:reduce){.reticle.kick svg{animation:none}}
 </style>
 </head>
 <body>
@@ -122,6 +134,47 @@ function setLang(l){document.documentElement.lang=l;try{localStorage.setItem('la
 (function(){var l;try{l=localStorage.getItem('lang')}catch(e){}
 if(!l)l=(navigator.language||'en').slice(0,2)==='es'?'es':'en';
 document.documentElement.lang=l})();
+</script>
+<script>
+(function(){
+var fine=window.matchMedia&&matchMedia('(pointer:fine)').matches;
+var calm=window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches;
+var NS='http://www.w3.org/2000/svg';
+var ret=document.createElement('div');ret.className='reticle';ret.setAttribute('aria-hidden','true');
+ret.innerHTML='<svg viewBox="0 0 100 100" fill="none" stroke="#e03550" stroke-width="5"><circle cx="50" cy="50" r="28"/><circle cx="50" cy="50" r="4" fill="#dcab4a" stroke="none"/><path d="M50 6v24M50 70v24M6 50h24M70 50h24" stroke="#eadfca"/></svg>';
+var flash=document.createElement('div');flash.className='flash';
+document.body.appendChild(ret);document.body.appendChild(flash);
+var holes=[];
+function move(e){ret.style.transform='translate('+e.clientX+'px,'+e.clientY+'px)';if(fine&&e.pointerType!=='touch')document.documentElement.classList.add('gun')}
+document.addEventListener('pointermove',move);
+document.addEventListener('pointerleave',function(){document.documentElement.classList.remove('gun')});
+function fx(x,y){
+ if(!calm){
+  ret.classList.remove('kick');void ret.offsetWidth;ret.classList.add('kick');
+  flash.animate([{opacity:.16},{opacity:0}],{duration:110});
+ }
+ var ring=document.createElement('div');ring.className='fx';
+ ring.style.cssText='left:'+x+'px;top:'+y+'px;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;border:2px solid #dcab4a;box-shadow:0 0 12px #e03550';
+ document.body.appendChild(ring);
+ if(!calm){
+  ring.animate([{transform:'scale(1)',opacity:1},{transform:'scale(5)',opacity:0}],{duration:260,easing:'ease-out'}).onfinish=function(){ring.remove()};
+  for(var i=0;i<7;i++){
+   var p=document.createElement('div');p.className='fx';var a=Math.random()*6.283,d=18+Math.random()*30;
+   p.style.cssText='left:'+x+'px;top:'+y+'px;width:3px;height:3px;background:'+(i%2?'#dcab4a':'#ff7a8c');
+   document.body.appendChild(p);
+   p.animate([{transform:'translate(0,0)',opacity:1},{transform:'translate('+Math.cos(a)*d+'px,'+Math.sin(a)*d+'px)',opacity:0}],{duration:300+Math.random()*150,easing:'ease-out'}).onfinish=(function(q){return function(){q.remove()}})(p);
+  }
+ } else {setTimeout(function(){ring.remove()},200)}
+ var h=document.createElementNS(NS,'svg');h.setAttribute('viewBox','0 0 40 40');h.setAttribute('class','fx hole');
+ h.style.left=x+'px';h.style.top=y+'px';
+ h.innerHTML='<circle cx="20" cy="20" r="5" fill="#000" stroke="#3a1a22" stroke-width="2"/><path d="M20 20L8 6M20 20L34 10M20 20L36 30M20 20L10 35M20 20L2 22" stroke="#000" stroke-width="1" opacity=".7"/>';
+ document.body.appendChild(h);holes.push(h);
+ setTimeout(function(){h.classList.add('gone')},50);
+ setTimeout(function(){h.remove();holes=holes.filter(function(q){return q!==h})},4300);
+ while(holes.length>14){holes.shift().remove()}
+}
+document.addEventListener('pointerdown',function(e){if(e.button>0)return;move(e);fx(e.clientX,e.clientY)});
+})();
 </script>
 </body>
 </html>
